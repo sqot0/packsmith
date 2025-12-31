@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://i.imgur.com/8npwiCp.png" alt="Packsmith - Smith modpack easy" />
+    <img src="https://i.imgur.com/cbSsyW9.png" alt="Packsmith - Smith modpack easy" />
 </p>
 
 Packsmith is an open source application for managing Minecraft modpacks that allows you:
