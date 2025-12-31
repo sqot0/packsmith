@@ -1,0 +1,64 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            platform: windows/amd64
+
+          # macOS
+          - os: darwin
+            arch: arm64
+            runner: macos-latest
+            platform: darwin/arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.5"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.12.0"
+
+      - name: Install pnpm
+        run: |
+          npm install -g pnpm
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+
+      - name: Build
+        run: |
+          mkdir -p dist
+          wails build \
+            --platform ${{ matrix.platform }} \
+        shell: bash
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: | 
+            build/bin/*
+            build/bin/packsmith.app/Contents/MacOS/packsmith
