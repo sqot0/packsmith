@@ -25,6 +25,15 @@ Packsmith is an open source application for managing Minecraft modpacks that all
 3. Create a new project or open an existing one.
 4. Add mods, manage versions, and configure client/server separation.
 
+# Building from Source
+
+To build Packsmith from source, follow these steps:
+
+1. Install Wails: Follow the installation guide at [https://wails.io/docs/gettingstarted/installation](https://wails.io/docs/gettingstarted/installation).
+2. Install pnpm globally: Run `npm install -g pnpm`.
+3. Build the application: Run `wails build`.
+4. The executable will be located in `build/bin`.
+
 # Contributing
 
 Packsmith is open-source and welcomes contributions!
