@@ -6,10 +6,36 @@
   import { uiState } from '$lib/stores/ui.svelte';
   import { projectState } from '$lib/stores/project.svelte';
   import {toast} from "svelte-sonner";
+  import ForgeLogo from "$lib/assets/forge.png"
+  import FabricLogo from "$lib/assets/fabric.png"
+  import NeoForgeLogo from "$lib/assets/neoforge.png"
+  import QuiltLogo from "$lib/assets/quilt.png"
+
+  type ModLoader = 'forge' | 'fabric' | 'neoforge' | 'quilt';
 
   let projectName = $state('');
   let minecraftVersion = $state('');
-  let modLoader = $state('forge'); // e.g., 'Fabric', 'Forge', etc
+  let modLoader = $state<ModLoader>('forge');
+
+  let modLoaders = {
+      "forge": {
+          "name": "Forge",
+          "logo": ForgeLogo
+      },
+        "fabric": {
+            "name": "Fabric",
+            "logo": FabricLogo
+        },
+        "neoforge": {
+            "name": "NeoForge",
+            "logo": NeoForgeLogo
+        },
+        "quilt": {
+            "name": "Quilt",
+            "logo": QuiltLogo
+        }
+
+  }
 
   async function handleSubmit(event: Event) {
     event.preventDefault();
@@ -19,7 +45,7 @@
 
       projectName = '';
       minecraftVersion = '';
-        modLoader = '';
+        modLoader = 'forge';
     } catch (error) {
       toast.error('Failed to create project', { description: String(error) });
     }
@@ -54,15 +80,19 @@
                       bind:value={modLoader}
               >
                   <Select.Trigger class="w-full">
-                      <span>{modLoader.charAt(0).toUpperCase() + modLoader.slice(1)}</span>
+
+                      <span>
+                          <img src={modLoaders[modLoader].logo} alt="{modLoaders[modLoader].name} Logo" class="inline h-5 mr-1">
+                          {modLoaders[modLoader].name}
+                      </span>
                   </Select.Trigger>
                   <Select.Content>
-                      <Select.Item value={"forge"}>
-                          Forge
-                      </Select.Item>
-                      <Select.Item value={"fabric"}>
-                          Fabric
-                      </Select.Item>
+                      {#each Object.entries(modLoaders) as [key, loader]}
+                          <Select.Item value={key}>
+                              <img src={loader.logo} alt="{loader.name} Logo" class="inline h-5">
+                              {loader.name}
+                          </Select.Item>
+                      {/each}
                   </Select.Content>
               </Select.Root>
           </div>

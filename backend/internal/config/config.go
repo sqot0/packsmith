@@ -29,9 +29,9 @@ type Config struct {
 func Init(projectPath, name, mc, loader string) error {
 	logger.Log.Printf("Initializing config for project: %s, MC: %s, Loader: %s", name, mc, loader)
 
-	if loader != "forge" && loader != "fabric" {
+	if loader != "forge" && loader != "fabric" && loader != "neoforge" && loader != "quilt" {
 		logger.Log.Printf("Invalid loader specified: %s", loader)
-		return errors.New("loader must be either 'forge' or 'fabric'")
+		return errors.New("loader must be either 'forge', 'neoforge', 'quilt' or 'fabric'")
 	}
 
 	cfg := Config{name, mc, loader, map[string]Mod{}, projectPath}

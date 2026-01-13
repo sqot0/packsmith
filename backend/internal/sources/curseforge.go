@@ -28,6 +28,10 @@ func searchModsCurseforge(cfg *config.Config, query string) ([]ModSearch, error)
 		params.Set("gameVersionTypeId", "1")
 	case "fabric":
 		params.Set("gameVersionTypeId", "4")
+	case "neoforge":
+		params.Set("gameVersionTypeId", "6")
+	case "quilt":
+		params.Set("gameVersionTypeId", "5")
 	}
 
 	req, _ := http.NewRequest("GET", "https://www.curseforge.com/minecraft/search?"+params.Encode(), nil)
@@ -128,6 +132,10 @@ func getDownloadURLCurseforge(cfg *config.Config, id, version string) (string, e
 		params.Set("gameVersionTypeId", "1")
 	case "fabric":
 		params.Set("gameVersionTypeId", "4")
+	case "neoforge":
+		params.Set("gameVersionTypeId", "6")
+	case "quilt":
+		params.Set("gameVersionTypeId", "5")
 	}
 
 	searchUrl := fmt.Sprintf("https://www.curseforge.com/minecraft/mc-mods/%s/files/all?", id)
@@ -195,6 +203,10 @@ func getModVersionsCurseforge(cfg *config.Config, id string) ([]string, error) {
 		params.Set("gameVersionTypeId", "1")
 	case "fabric":
 		params.Set("gameVersionTypeId", "4")
+	case "neoforge":
+		params.Set("gameVersionTypeId", "6")
+	case "quilt":
+		params.Set("gameVersionTypeId", "5")
 	}
 
 	searchUrl := fmt.Sprintf("https://www.curseforge.com/minecraft/mc-mods/%s/files/all?", id)

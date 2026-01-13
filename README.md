@@ -13,7 +13,7 @@ Packsmith is an open source application for managing Minecraft modpacks that all
 > Please keep in mind that Packsmith is still under active development and may contain bugs or incomplete features
 
 # Requirements
-- Windows 10 or later / macOS 10.15 or later
+- Windows 10 or later / macOS 10.15 or later (macOS support is experimental)
 - Access to the internet and [Modrinth](https://modrinth.com)/[CurseForge](https://www.curseforge.com/) for downloading mods
 
 # Quick Start
