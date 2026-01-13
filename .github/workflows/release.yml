@@ -54,6 +54,7 @@ jobs:
           mkdir -p dist
           wails build \
             --platform ${{ matrix.platform }} \
+            --clean
         shell: bash
 
       - name: Upload to Release
