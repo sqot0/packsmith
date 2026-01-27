@@ -36,11 +36,16 @@ func Init() {
 func OpenProject(cfg *config.Config) {
 	var smallImage string
 
-	if cfg.Loader == "forge" {
+	switch cfg.Loader {
+	case "forge":
 		smallImage = "https://i.imgur.com/O9acTGw.png"
-	} else if cfg.Loader == "fabric" {
+	case "fabric":
 		smallImage = "https://i.imgur.com/lLTttOy.png"
-	} else {
+	case "neoforge":
+		smallImage = "https://i.imgur.com/ooUR90U.png"
+	case "quilt":
+		smallImage = "https://i.imgur.com/5lkHEvL.png"
+	default:
 		smallImage = ""
 	}
 
