@@ -11,7 +11,7 @@
   import type { ModSide, ModSearchResult } from '$lib/types/mod';
   import CurseForgeIcon from '$lib/icons/CurseforgeIcon.svelte';
   import ModrinthIcon from '$lib/icons/ModrinthIcon.svelte';
-  import { Search, Server, Laptop, ExternalLink, Plus, Loader } from '@lucide/svelte';
+  import { Search, Server, Laptop, ExternalLink, Plus, Loader, Upload } from '@lucide/svelte';
   import { BrowserOpenURL } from '../../../wailsjs/runtime';
     import {toast} from "svelte-sonner";
 
@@ -23,6 +23,32 @@
     event.preventDefault();
     await modSearchState.clearResults();
     await modSearchState.search();
+  }
+
+  async function handleAddLocalMod() {
+    try {
+      const filePath = await modService.selectLocalModFile();
+      if (filePath) {
+        await uiState.openAddLocalModDialog(filePath);
+      }
+    } catch (error) {
+      console.error('Failed to select file:', error);
+      toast.error('Failed to select file', { description: String(error) });
+    }
+  }
+
+  async function handleAddLocalModWithSide() {
+    if (!uiState.localModFilePath) return;
+
+    try {
+      await modService.addLocalMod(uiState.localModFilePath, selectedSide);
+      await projectState.refreshProject();
+      toast.success('Local mod added successfully');
+      await uiState.closeAddLocalModDialog();
+    } catch (error) {
+      console.error('Failed to add local mod:', error);
+      toast.error('Failed to add local mod', { description: String(error) });
+    }
   }
 
   function handlePlatformChange() {
@@ -92,32 +118,43 @@
     </Dialog.Header>
 
     <div class="grid gap-4">
-      <div class="grid gap-3">
-        <Label for="platform">Platform</Label>
-        <Select.Root type="single" bind:value={modSearchState.platform} onValueChange={handlePlatformChange}>
-          <Select.Trigger class="w-[180px]">
-            <span class="flex items-center gap-2">
-              {#if modSearchState.platform === 'modrinth'}
-                <ModrinthIcon />
-                Modrinth
-              {:else if modSearchState.platform === 'curseforge'}
-                <CurseForgeIcon />
-                Curseforge
-              {:else}
-                Select Platform
-              {/if}
-            </span>
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Item value="modrinth">
-              <ModrinthIcon /> Modrinth
-            </Select.Item>
-            <Select.Item value="curseforge">
-              <CurseForgeIcon /> Curseforge
-            </Select.Item>
-          </Select.Content>
-        </Select.Root>
-      </div>
+        <div class="flex items-end justify-between gap-2">
+          <div class="w-[220px] grid gap-2">
+            <Label for="platform">Platform</Label>
+            <Select.Root type="single" bind:value={modSearchState.platform} onValueChange={handlePlatformChange}>
+              <Select.Trigger class="w-full">
+                <span class="flex items-center gap-2">
+                  {#if modSearchState.platform === 'modrinth'}
+                    <ModrinthIcon />
+                    Modrinth
+                  {:else if modSearchState.platform === 'curseforge'}
+                    <CurseForgeIcon />
+                    Curseforge
+                  {:else}
+                    Select Platform
+                  {/if}
+                </span>
+              </Select.Trigger>
+              <Select.Content>
+                <Select.Item value="modrinth">
+                  <ModrinthIcon /> Modrinth
+                </Select.Item>
+                <Select.Item value="curseforge">
+                  <CurseForgeIcon /> Curseforge
+                </Select.Item>
+              </Select.Content>
+            </Select.Root>
+          </div>
+            <Button
+                    class="cursor-pointer gap-2 p-2"
+                    onclick={handleAddLocalMod}
+                    variant="secondary"
+                    size="sm"
+            >
+                <Upload class="h-4 w-4" />
+                Upload Mod
+            </Button>
+        </div>
 
       <div class="grid gap-3">
         <Label for="query">Query</Label>
@@ -242,3 +279,48 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
+<Dialog.Root bind:open={uiState.addLocalModDialogOpen}>
+  <Dialog.Content class="max-w-sm">
+    <Dialog.Header>
+      <Dialog.Title>Add Local Mod</Dialog.Title>
+      <Dialog.Description>
+        Select where this local mod should be installed.
+      </Dialog.Description>
+    </Dialog.Header>
+
+    <div class="grid gap-4">
+      <div class="grid gap-3">
+        <Label for="localModFile">File: {uiState.localModFilePath?.split(/[\\\/]/).pop()}</Label>
+      </div>
+      <div class="grid gap-3">
+        <Label for="side">Side</Label>
+        <Select.Root type="single" bind:value={selectedSide}>
+          <Select.Trigger class="w-full">
+            <span>
+              {#if selectedSide === 'client'}
+                Client
+              {:else if selectedSide === 'server'}
+                Server
+              {:else if selectedSide === 'both'}
+                Both
+              {/if}
+            </span>
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="client">Client</Select.Item>
+            <Select.Item value="server">Server</Select.Item>
+            <Select.Item value="both">Both</Select.Item>
+          </Select.Content>
+        </Select.Root>
+      </div>
+    </div>
+
+    <Dialog.Footer>
+      <Button class="cursor-pointer" onclick={handleAddLocalModWithSide}>
+        Add Mod
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+

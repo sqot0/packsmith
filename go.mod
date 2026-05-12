@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
+	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/wailsapp/wails/v2 v2.12.0
 )
 

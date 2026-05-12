@@ -88,7 +88,10 @@ func GetModPlatform(source string) string {
 	if strings.HasPrefix(source, "https://www.curseforge.com") {
 		logger.Log.Println("Platform: curseforge")
 		return "curseforge"
+	} else if strings.HasPrefix(source, "https://modrinth.com") {
+		logger.Log.Println("Platform: modrinth")
+		return "modrinth"
 	}
-	logger.Log.Println("Platform: modrinth")
-	return "modrinth"
+	logger.Log.Println("Platform: Local File")
+	return "local"
 }

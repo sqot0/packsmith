@@ -11,7 +11,7 @@ import (
 	"github.com/sqot0/packsmith/backend/internal/logger"
 )
 
-const cacheDir = "cache"
+const CacheDir = "cache"
 
 func Download(projectPath, fileURL, version string) (string, error) {
 	logger.Log.Printf("Downloading file from URL: %s", fileURL)
@@ -27,7 +27,7 @@ func Download(projectPath, fileURL, version string) (string, error) {
 		return "", fmt.Errorf("download failed: %s", resp.Status)
 	}
 
-	cacheFolder := filepath.Join(projectPath, cacheDir)
+	cacheFolder := filepath.Join(projectPath, CacheDir)
 	logger.Log.Printf("Ensuring cache folder exists: %s", cacheFolder)
 	if err := os.MkdirAll(cacheFolder, 0o755); err != nil {
 		logger.Log.Printf("Error creating cache folder: %v", err)

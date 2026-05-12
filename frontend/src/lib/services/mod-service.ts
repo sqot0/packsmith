@@ -7,7 +7,7 @@ import {
     InstallMods,
     ChangeModSide,
     ChangeModLocked,
-    ChangeModVersion, GetModVersions,
+    ChangeModVersion, GetModVersions, AddLocalMod, SelectLocalModFile,
 } from '$backend';
 import type {ModSearchResult, ModSide, AddModOptions, ModUpdateInfo} from '$lib/types/mod';
 
@@ -67,6 +67,14 @@ export async function getModVersions(modId: string): Promise<string[]> {
 
 export async function changeModVersion(modId: string, version: string): Promise<void> {
     return await ChangeModVersion(modId, version);
+}
+
+export async function selectLocalModFile(): Promise<string> {
+    return await SelectLocalModFile();
+}
+
+export async function addLocalMod(modId: string, side: string): Promise<void> {
+    return await AddLocalMod(modId, side);
 }
 
 /**

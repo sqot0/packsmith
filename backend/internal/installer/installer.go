@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -39,6 +40,9 @@ func InstallMods(projectPath string) error {
 		cacheMod := path.Join(cacheFolder, mod.Filename)
 
 		if _, err := os.Stat(cacheMod); os.IsNotExist(err) {
+			if mod.Source == "file" {
+				return fmt.Errorf("local mod file not found in cache: %s", cacheMod)
+			}
 			logger.Log.Printf("Mod not in cache, downloading: %s", mod.URL)
 			if _, err := fs.Download(projectPath, mod.URL, mod.Version); err != nil {
 				logger.Log.Printf("Error downloading mod: %v", err)

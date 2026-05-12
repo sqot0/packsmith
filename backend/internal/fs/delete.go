@@ -9,7 +9,7 @@ import (
 
 func Delete(projectPath, filename string) error {
 	logger.Log.Printf("Deleting file: %s in project: %s", filename, projectPath)
-	cacheModPath := filepath.Join(projectPath, cacheDir, filename)
+	cacheModPath := filepath.Join(projectPath, CacheDir, filename)
 	err := os.RemoveAll(cacheModPath)
 	if err != nil {
 		logger.Log.Printf("Error deleting file: %v", err)

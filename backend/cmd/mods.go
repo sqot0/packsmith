@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/fs"
 	"github.com/sqot0/packsmith/backend/internal/installer"
 	"github.com/sqot0/packsmith/backend/internal/logger"
 	"github.com/sqot0/packsmith/backend/internal/sources"
 	"github.com/sqot0/packsmith/backend/internal/updater"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 func (a *App) SearchMods(query string, platform string) ([]sources.ModSearch, error) {
@@ -58,6 +61,69 @@ func (a *App) AddMod(modID, platform string, metadata sources.ModMetaData) error
 		Filename: filename,
 	}
 	logger.Log.Printf("Mod added to config: %s", modID)
+
+	if err := config.Save(cfg); err != nil {
+		logger.Log.Printf("Error saving config: %v", err)
+		return err
+	}
+	logger.Log.Println("Config saved successfully")
+	return nil
+}
+
+func (a *App) SelectLocalModFile() (string, error) {
+	logger.Log.Println("Opening file selection dialog for local mod")
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Mod JAR File",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "JAR Files (*.jar)",
+				Pattern:     "*.jar",
+			},
+			{
+				DisplayName: "All Files (*.*)",
+				Pattern:     "*.*",
+			},
+		},
+	})
+	if err != nil {
+		logger.Log.Printf("Error opening file dialog: %v", err)
+		return "", err
+	}
+	logger.Log.Printf("Selected mod file: %s", filePath)
+	return filePath, nil
+}
+
+func (a *App) AddLocalMod(filePath, side string) error {
+	logger.Log.Printf("Adding local mod from %s with side: %s", filePath, side)
+	cfg, err := a.loadConfig()
+	if err != nil {
+		logger.Log.Printf("Failed to load config for AddLocalMod: %v", err)
+		return err
+	}
+
+	modID, err := sources.GetModID(filePath)
+	if err != nil {
+		logger.Log.Printf("Failed to get mod ID for %s: %v", filePath, err)
+	}
+
+	fileName := filepath.Base(filePath)
+	cfg.Mods[modID] = config.Mod{
+		Source:   "file",
+		URL:      "",
+		Version:  "",
+		Side:     side,
+		Filename: fileName,
+	}
+
+	cacheFolder := filepath.Join(a.ProjectPath, fs.CacheDir)
+	destPath := filepath.Join(cacheFolder, fileName)
+
+	logger.Log.Printf("Copying mod file from %s to %s", filePath, destPath)
+	err = fs.Copy(filePath, destPath)
+	if err != nil {
+		logger.Log.Printf("Error copying file to cache: %v", err)
+		return err
+	}
 
 	if err := config.Save(cfg); err != nil {
 		logger.Log.Printf("Error saving config: %v", err)

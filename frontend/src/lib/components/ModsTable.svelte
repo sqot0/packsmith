@@ -5,7 +5,7 @@
   import * as Select from '$lib/components/ui/select';
   import { Label } from '$lib/components/ui/label';
   import { Input } from '$lib/components/ui/input';
-  import { ExternalLink, Laptop, Server, Trash, Lock, LockOpen, CircleArrowUp, ListStart, Ellipsis } from '@lucide/svelte';
+  import { ExternalLink, Laptop, Server, Trash, Lock, LockOpen, CircleArrowUp, ListStart, Ellipsis, Package } from '@lucide/svelte';
   import CurseforgeIcon from '$lib/icons/CurseforgeIcon.svelte';
   import ModrinthIcon from '$lib/icons/ModrinthIcon.svelte';
   import { BrowserOpenURL } from '$runtime';
@@ -74,6 +74,8 @@
               <CurseforgeIcon class="w-5 mr-2" />
             {:else if mod?.source?.startsWith('https://modrinth.com')}
               <ModrinthIcon class="w-5 h-5 mr-2" />
+            {:else }
+                <Package class="w-5 h-5 mr-2" />
             {/if}
             <span>{id}</span>
             <ExternalLink class="w-3 mb-1" />
@@ -106,13 +108,13 @@
               </DropdownMenu.Trigger>
               <DropdownMenu.Content>
                 <DropdownMenu.Group>
-                  <DropdownMenu.Item onclick={() => uiState.openChangeVersionModDialog(id)}>
+                  <DropdownMenu.Item disabled={mod.source === "file"} onclick={() => uiState.openChangeVersionModDialog(id)}>
                     <CircleArrowUp class="w-4" /> Change Version
                   </DropdownMenu.Item>
                     <DropdownMenu.Item onclick={() => openChangeSideDialog(id, mod?.side || 'both')}>
                       <ListStart class="w-4" />Change Side
                     </DropdownMenu.Item>
-                  <DropdownMenu.Item onclick={async () => {
+                  <DropdownMenu.Item disabled={mod.source === "file"} onclick={async () => {
                       try {
                         await modService.changeModLocked(id, !mod?.locked)
                         await projectState.refreshProject()

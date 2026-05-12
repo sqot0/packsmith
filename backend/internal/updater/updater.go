@@ -36,6 +36,10 @@ func CheckMods(cfg *config.Config, modIDs []string) ([]ModToUpdate, error) {
 		logger.Log.Printf("Checking update for mod: %s", j.modId)
 		platform := sources.GetModPlatform(j.mod.Source)
 
+		if platform == "local" {
+			return result{}
+		}
+
 		version, err := sources.GetLatestVersion(cfg, j.modId, platform)
 		if err != nil {
 			logger.Log.Printf("Error checking mod %s: %v", j.modId, err)
