@@ -36,7 +36,7 @@ jobs:
                   npm install -g pnpm
 
             - name: Install Wails
-              run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+              run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
             - name: Build
               run: wails build --clean
