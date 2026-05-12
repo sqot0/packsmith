@@ -1,251 +1,238 @@
 package sources
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/logger"
 	"github.com/sqot0/packsmith/backend/internal/util"
 )
 
-func searchModsCurseforge(cfg *config.Config, query string) ([]ModSearch, error) {
-	logger.Log.Printf("Searching CurseForge for query: %s", query)
-	params := url.Values{}
-	params.Set("page", "1")
-	params.Set("pageSize", "5")
-	params.Set("sortBy", "relevancy")
-	params.Set("class", "mc-mods")
+const (
+	curseforgeAPI = "https://api.curseforge.com/v1"
+	minecraftGame = 432
+)
 
-	params.Set("version", cfg.Minecraft)
-	params.Set("search", query)
-	switch cfg.Loader {
+type curseforgeSearchResponse struct {
+	Data []curseforgeMod `json:"data"`
+}
+
+type curseforgeFilesResponse struct {
+	Data []curseforgeFile `json:"data"`
+}
+
+type curseforgeMod struct {
+	ID            int              `json:"id"`
+	Name          string           `json:"name"`
+	Summary       string           `json:"summary"`
+	DownloadCount float64          `json:"downloadCount"`
+	Slug          string           `json:"slug"`
+	LatestFiles   []curseforgeFile `json:"latestFiles"`
+	Links         struct {
+		WebsiteURL string `json:"websiteUrl"`
+	} `json:"links"`
+}
+
+type curseforgeFile struct {
+	ID           int      `json:"id"`
+	DisplayName  string   `json:"displayName"`
+	FileName     string   `json:"fileName"`
+	DownloadURL  string   `json:"downloadUrl"`
+	GameVersions []string `json:"gameVersions"`
+}
+
+func curseforgeLoaderType(loader string) int {
+	switch strings.ToLower(loader) {
 	case "forge":
-		params.Set("gameVersionTypeId", "1")
+		return 1
 	case "fabric":
-		params.Set("gameVersionTypeId", "4")
-	case "neoforge":
-		params.Set("gameVersionTypeId", "6")
+		return 4
 	case "quilt":
-		params.Set("gameVersionTypeId", "5")
+		return 5
+	case "neoforge":
+		return 6
+	default:
+		return 0
+	}
+}
+
+func makeCurseforgeRequest(endpoint string, target interface{}) error {
+	req, err := http.NewRequest("GET", curseforgeAPI+endpoint, nil)
+	if err != nil {
+		return err
 	}
 
-	req, _ := http.NewRequest("GET", "https://www.curseforge.com/minecraft/search?"+params.Encode(), nil)
-	setHeadersForRequest(req)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-api-key", "$2a$10$2nOZBkW3JY/w.42wu7fH4OiyObiV4osugysUcaw/YiGElB8dTLNfi")
+	req.Header.Set("User-Agent", "PackSmith/1.0")
 
-	logger.Log.Printf("Making HTTP request to CurseForge search")
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
-		logger.Log.Printf("Error making request: %v", err)
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
-		logger.Log.Printf("CurseForge search returned status %d", resp.StatusCode)
-		return nil, fmt.Errorf("curseforge search returned status %d", resp.StatusCode)
+		return fmt.Errorf("curseforge api returned status %d", resp.StatusCode)
 	}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	return json.NewDecoder(resp.Body).Decode(target)
+}
+
+func searchModsCurseforge(cfg *config.Config, query string) ([]ModSearch, error) {
+	logger.Log.Printf("Searching CurseForge for query: %s", query)
+
+	params := url.Values{}
+	params.Set("gameId", strconv.Itoa(minecraftGame))
+	params.Set("searchFilter", query)
+	params.Set("pageSize", "5")
+	params.Set("sortField", "2")
+	params.Set("sortOrder", "desc")
+	params.Set("classId", "6")
+
+	if cfg.Minecraft != "" {
+		params.Set("gameVersion", cfg.Minecraft)
+	}
+
+	modLoaderType := curseforgeLoaderType(cfg.Loader)
+	if modLoaderType != 0 {
+		params.Set("modLoaderType", strconv.Itoa(modLoaderType))
+	}
+
+	var response curseforgeSearchResponse
+
+	err := makeCurseforgeRequest(
+		"/mods/search?"+params.Encode(),
+		&response,
+	)
 	if err != nil {
-		logger.Log.Printf("Error parsing HTML: %v", err)
+		logger.Log.Printf("CurseForge search error: %v", err)
 		return nil, err
 	}
 
-	type curseforgeModInfo struct {
-		id, name, description, downloads, url string
-	}
+	var (
+		mods []ModSearch
+		mu   sync.Mutex
+	)
 
-	var modInfos []curseforgeModInfo
-	doc.Find(".project-card").Each(func(i int, s *goquery.Selection) {
-		modUrl := "https://www.curseforge.com" + s.Find(".name").AttrOr("href", "")
-		if modUrl == "" {
-			return
-		}
-		id := strings.TrimPrefix(modUrl, "https://www.curseforge.com/minecraft/mc-mods/")
-		name := s.Find(".name span").Text()
-		description := s.Find(".description").Text()
-		downloads := s.Find(".details-list .detail-downloads").Text()
-
-		modInfos = append(modInfos, curseforgeModInfo{
-			id: id, name: name, description: description, downloads: downloads, url: modUrl,
-		})
-	})
-
-	var mods []ModSearch
-	var mu sync.Mutex
-	processMod := func(info curseforgeModInfo) error {
-		versions, err := getModVersionsCurseforge(cfg, info.id)
+	processMod := func(mod curseforgeMod) error {
+		versions, err := getModVersionsCurseforge(cfg, mod.Slug)
 		if err != nil {
-			logger.Log.Printf("Error getting version for mod %s: %v", info.id, err)
+			logger.Log.Printf(
+				"Error getting versions for mod %s: %v",
+				mod.Name,
+				err,
+			)
 			return err
 		}
+
 		mu.Lock()
 		mods = append(mods, ModSearch{
-			ID:          info.id,
-			Name:        info.name,
-			Description: info.description,
-			Downloads:   info.downloads,
-			URL:         info.url,
+			ID:          mod.Slug,
+			Name:        mod.Name,
+			Description: mod.Summary,
+			Downloads:   formatDownloads(mod.DownloadCount),
+			URL:         mod.Links.WebsiteURL,
 			ClientSide:  "",
 			ServerSide:  "",
 			Versions:    versions,
 		})
 		mu.Unlock()
+
 		return nil
 	}
 
-	jobs := make(chan curseforgeModInfo, len(modInfos))
-	results := util.WorkerPool(jobs, processMod, len(modInfos))
+	jobs := make(chan curseforgeMod, len(response.Data))
+
+	results := util.WorkerPool(
+		jobs,
+		processMod,
+		len(response.Data),
+	)
 
 	go func() {
-		for _, info := range modInfos {
-			jobs <- info
+		for _, mod := range response.Data {
+			jobs <- mod
 		}
+
 		close(jobs)
 	}()
 
 	for err := range results {
 		if err != nil {
+			logger.Log.Printf("Error processing mod: %v", err)
 			return nil, err
 		}
 	}
 
-	logger.Log.Printf("Found %d mods on CurseForge", len(mods))
 	return mods, nil
 }
 
 func getDownloadURLCurseforge(cfg *config.Config, id, version string) (string, error) {
-	logger.Log.Printf("Getting download URL for CurseForge mod: %s", id)
-	params := url.Values{}
-	params.Set("page", "1")
-	params.Set("pageSize", "20")
-	params.Set("showAlphaFiles", "hide")
-	params.Set("class", "mc-mods")
+	logger.Log.Printf("Getting download URL for mod: %s", id)
 
-	params.Set("version", cfg.Minecraft)
-	switch cfg.Loader {
-	case "forge":
-		params.Set("gameVersionTypeId", "1")
-	case "fabric":
-		params.Set("gameVersionTypeId", "4")
-	case "neoforge":
-		params.Set("gameVersionTypeId", "6")
-	case "quilt":
-		params.Set("gameVersionTypeId", "5")
-	}
-
-	searchUrl := fmt.Sprintf("https://www.curseforge.com/minecraft/mc-mods/%s/files/all?", id)
-	req, _ := http.NewRequest("GET", searchUrl+params.Encode(), nil)
-	setHeadersForRequest(req)
-
-	logger.Log.Printf("Making HTTP request to CurseForge files page")
-	resp, err := http.DefaultClient.Do(req)
+	mod, err := getModBySlug(id)
 	if err != nil {
-		logger.Log.Printf("Error making request: %v", err)
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		logger.Log.Printf("CurseForge files page returned status %d", resp.StatusCode)
-		return "", fmt.Errorf("curseforge search returned status %d", resp.StatusCode)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		logger.Log.Printf("Error parsing HTML: %v", err)
 		return "", err
 	}
 
-	projectId := doc.Find(".project-id").Text()
-	if projectId == "" {
-		logger.Log.Println("Could not find project ID")
-		return "", fmt.Errorf("could not find project ID")
+	files, err := getModFiles(cfg, mod.ID)
+	if err != nil {
+		return "", err
 	}
 
-	var downloadUrl string
-	found := false
-	doc.Find(".file-row-details").Each(func(i int, s *goquery.Selection) {
-		title := s.Find("span.name").AttrOr("title", "")
-		if title == version {
-			fileDetailsURL := s.AttrOr("href", "")
-			if fileDetailsURL != "" {
-				fileId := fileDetailsURL[strings.LastIndex(fileDetailsURL, "/")+1:]
-				downloadUrl = fmt.Sprintf("https://www.curseforge.com/api/v1/mods/%s/files/%s/download", projectId, fileId)
-				found = true
-				return
+	for _, file := range files {
+		if file.DisplayName == version {
+			if file.DownloadURL == "" {
+				return "", fmt.Errorf("download url is empty")
 			}
-		}
-	})
 
-	if !found {
-		logger.Log.Printf("Could not find file for version: %s", version)
-		return "", fmt.Errorf("could not find file for version: %s", version)
+			logger.Log.Printf(
+				"Download URL obtained for %s: %s",
+				version,
+				file.DownloadURL,
+			)
+
+			return file.DownloadURL, nil
+		}
 	}
 
-	logger.Log.Printf("Download URL obtained: %s, version: %s", downloadUrl)
-	return downloadUrl, nil
+	return "", fmt.Errorf("version not found: %s", version)
 }
 
 func getModVersionsCurseforge(cfg *config.Config, id string) ([]string, error) {
-	params := url.Values{}
-	params.Set("page", "1")
-	params.Set("pageSize", "20")
-	params.Set("showAlphaFiles", "hide")
-	params.Set("class", "mc-mods")
-
-	params.Set("version", cfg.Minecraft)
-	switch cfg.Loader {
-	case "forge":
-		params.Set("gameVersionTypeId", "1")
-	case "fabric":
-		params.Set("gameVersionTypeId", "4")
-	case "neoforge":
-		params.Set("gameVersionTypeId", "6")
-	case "quilt":
-		params.Set("gameVersionTypeId", "5")
-	}
-
-	searchUrl := fmt.Sprintf("https://www.curseforge.com/minecraft/mc-mods/%s/files/all?", id)
-	req, _ := http.NewRequest("GET", searchUrl+params.Encode(), nil)
-	setHeadersForRequest(req)
-
-	logger.Log.Printf("Making HTTP request to CurseForge files page for version")
-	resp, err := http.DefaultClient.Do(req)
+	mod, err := getModBySlug(id)
 	if err != nil {
-		logger.Log.Printf("Error making request: %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		logger.Log.Printf("CurseForge files page returned status %d", resp.StatusCode)
-		return nil, fmt.Errorf("curseforge files page returned status %d", resp.StatusCode)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		logger.Log.Printf("Error parsing HTML: %v", err)
 		return nil, err
 	}
 
-	fileVersions := doc.Find("span.name")
-	if fileVersions.Length() == 0 {
-		logger.Log.Println("Could not find file version")
-		return nil, fmt.Errorf("could not find file version")
+	files, err := getModFiles(cfg, mod.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	var result []string
-	fileVersions.Each(func(i int, s *goquery.Selection) {
-		version := s.AttrOr("title", "")
-		if version != "" {
-			result = append(result, version)
-		}
-	})
+	var versions []string
 
-	return result, nil
+	for _, file := range files {
+		versions = append(versions, file.DisplayName)
+	}
+
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no versions found")
+	}
+
+	return versions, nil
 }
 
 func getLatestVersionCurseforge(cfg *config.Config, id string) (string, error) {
@@ -253,10 +240,75 @@ func getLatestVersionCurseforge(cfg *config.Config, id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if len(versions) == 0 {
-		logger.Log.Println("No versions found for mod")
-		return "", fmt.Errorf("no versions found for mod")
+		return "", fmt.Errorf("no versions found")
 	}
 
 	return versions[0], nil
+}
+
+func getModBySlug(slug string) (*curseforgeMod, error) {
+	params := url.Values{}
+	params.Set("gameId", strconv.Itoa(minecraftGame))
+	params.Set("slug", slug)
+
+	var response curseforgeSearchResponse
+
+	err := makeCurseforgeRequest(
+		"/mods/search?"+params.Encode(),
+		&response,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(response.Data) == 0 {
+		return nil, fmt.Errorf("mod not found")
+	}
+
+	return &response.Data[0], nil
+}
+
+func getModFiles(cfg *config.Config, modID int) ([]curseforgeFile, error) {
+	params := url.Values{}
+	params.Set("pageSize", "50")
+
+	if cfg.Minecraft != "" {
+		params.Set("gameVersion", cfg.Minecraft)
+	}
+
+	modLoaderType := curseforgeLoaderType(cfg.Loader)
+	if modLoaderType != 0 {
+		params.Set("modLoaderType", strconv.Itoa(modLoaderType))
+	}
+
+	var response curseforgeFilesResponse
+
+	err := makeCurseforgeRequest(
+		fmt.Sprintf(
+			"/mods/%d/files?%s",
+			modID,
+			params.Encode(),
+		),
+		&response,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Data, nil
+}
+
+func formatDownloads(downloads float64) string {
+	switch {
+	case downloads >= 1_000_000:
+		return fmt.Sprintf("%.1fM", downloads/1_000_000)
+
+	case downloads >= 1_000:
+		return fmt.Sprintf("%.1fK", downloads/1_000)
+
+	default:
+		return fmt.Sprintf("%.0f", downloads)
+	}
 }
