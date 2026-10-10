@@ -34,6 +34,14 @@ func (a *App) GetLogs() (string, error) {
 	return string(data), nil
 }
 
+func (a *App) GetProjectConfig() (*config.Config, error) {
+	return a.loadConfig()
+}
+
+func (a *App) SetProjectPath(path string) {
+	a.ProjectPath = path
+}
+
 func (a *App) loadConfig() (*config.Config, error) {
 	cfg, err := config.Load(a.ProjectPath)
 	if err != nil {

@@ -3,7 +3,7 @@ package installer
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/fs"
@@ -19,9 +19,9 @@ func InstallMods(projectPath string) error {
 		return err
 	}
 
-	cacheFolder := path.Join(projectPath, "cache")
-	clientFolder := path.Join(projectPath, "client")
-	serverFolder := path.Join(projectPath, "server")
+	cacheFolder := filepath.Join(projectPath, "cache")
+	clientFolder := filepath.Join(projectPath, "client")
+	serverFolder := filepath.Join(projectPath, "server")
 
 	logger.Log.Println("Cleaning and creating client and server folders")
 	for _, folder := range []string{clientFolder, serverFolder} {
@@ -37,7 +37,7 @@ func InstallMods(projectPath string) error {
 
 	processMod := func(mod config.Mod) error {
 		logger.Log.Printf("Processing mod: %s", mod.Filename)
-		cacheMod := path.Join(cacheFolder, mod.Filename)
+		cacheMod := filepath.Join(cacheFolder, mod.Filename)
 
 		if _, err := os.Stat(cacheMod); os.IsNotExist(err) {
 			if mod.Source == "file" {
@@ -53,25 +53,25 @@ func InstallMods(projectPath string) error {
 		switch mod.Side {
 		case "both":
 			logger.Log.Printf("Copying mod to client and server: %s", mod.Filename)
-			if err := fs.Copy(cacheMod, path.Join(clientFolder, mod.Filename)); err != nil {
+			if err := fs.Copy(cacheMod, filepath.Join(clientFolder, mod.Filename)); err != nil {
 				logger.Log.Printf("Error copying to client: %v", err)
 				return err
 			}
-			if err := fs.Copy(cacheMod, path.Join(serverFolder, mod.Filename)); err != nil {
+			if err := fs.Copy(cacheMod, filepath.Join(serverFolder, mod.Filename)); err != nil {
 				logger.Log.Printf("Error copying to server: %v", err)
 				return err
 			}
 
 		case "client":
 			logger.Log.Printf("Copying mod to client: %s", mod.Filename)
-			if err := fs.Copy(cacheMod, path.Join(clientFolder, mod.Filename)); err != nil {
+			if err := fs.Copy(cacheMod, filepath.Join(clientFolder, mod.Filename)); err != nil {
 				logger.Log.Printf("Error copying to client: %v", err)
 				return err
 			}
 
 		case "server":
 			logger.Log.Printf("Copying mod to server: %s", mod.Filename)
-			if err := fs.Copy(cacheMod, path.Join(serverFolder, mod.Filename)); err != nil {
+			if err := fs.Copy(cacheMod, filepath.Join(serverFolder, mod.Filename)); err != nil {
 				logger.Log.Printf("Error copying to server: %v", err)
 				return err
 			}

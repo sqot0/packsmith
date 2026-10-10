@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/sqot0/packsmith/backend/internal/logger"
 )
@@ -46,7 +46,7 @@ func Init(projectPath, name, mc, loader string) error {
 
 func Load(projectPath string) (*Config, error) {
 	logger.Log.Printf("Loading config from path: %s", projectPath)
-	cfgFile := path.Join(projectPath, "packsmith.json")
+	cfgFile := filepath.Join(projectPath, "packsmith.json")
 	data, err := os.ReadFile(cfgFile)
 	if err != nil {
 		logger.Log.Printf("Error reading config file: %v", err)
@@ -76,13 +76,13 @@ func Save(cfg *Config) error {
 }
 
 func write(cfg Config) error {
-	logger.Log.Printf("Writing config to file: %s", path.Join(cfg.path, "packsmith.json"))
+	logger.Log.Printf("Writing config to file: %s", filepath.Join(cfg.path, "packsmith.json"))
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		logger.Log.Printf("Error marshaling config: %v", err)
 		return err
 	}
-	cfgFile := path.Join(cfg.path, "packsmith.json")
+	cfgFile := filepath.Join(cfg.path, "packsmith.json")
 	err = os.WriteFile(cfgFile, data, 0o644)
 	if err != nil {
 		logger.Log.Printf("Error writing config file: %v", err)

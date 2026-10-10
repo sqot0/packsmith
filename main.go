@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"os"
 
 	"github.com/sqot0/packsmith/backend/cmd"
 	"github.com/wailsapp/wails/v2"
@@ -14,6 +15,18 @@ var assets embed.FS
 
 func main() {
 	app := cmd.NewApp()
+
+	for i, arg := range os.Args[1:] {
+		if arg == "--mcp" || arg == "mcp" {
+			if len(os.Args) > i+2 && os.Args[i+2] != "" {
+				_, _ = app.OpenProject(os.Args[i+2])
+			}
+			if err := app.ServeMCP(); err != nil {
+				os.Exit(1)
+			}
+			return
+		}
+	}
 
 	err := wails.Run(&options.App{
 		Title:     "Packsmith",

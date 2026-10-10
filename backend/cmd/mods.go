@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/fs"
@@ -102,8 +104,9 @@ func (a *App) AddLocalMod(filePath, side string) error {
 	}
 
 	modID, err := sources.GetModID(filePath)
-	if err != nil {
-		logger.Log.Printf("Failed to get mod ID for %s: %v", filePath, err)
+	if err != nil || modID == "" {
+		logger.Log.Printf("Failed to get mod ID for %s: %v; using filename fallback", filePath, err)
+		modID = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 	}
 
 	fileName := filepath.Base(filePath)
@@ -116,8 +119,12 @@ func (a *App) AddLocalMod(filePath, side string) error {
 	}
 
 	cacheFolder := filepath.Join(a.ProjectPath, fs.CacheDir)
-	destPath := filepath.Join(cacheFolder, fileName)
+	if err := os.MkdirAll(cacheFolder, 0o755); err != nil {
+		logger.Log.Printf("Error creating cache directory: %v", err)
+		return err
+	}
 
+	destPath := filepath.Join(cacheFolder, fileName)
 	logger.Log.Printf("Copying mod file from %s to %s", filePath, destPath)
 	err = fs.Copy(filePath, destPath)
 	if err != nil {

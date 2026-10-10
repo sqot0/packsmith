@@ -14,7 +14,10 @@ var startTime time.Time
 func Init() {
 	err := client.Login("1455868971067637763")
 	if err != nil {
-		panic(err)
+		if logger.Log != nil {
+			logger.Log.Printf("Discord RPC login failed (Discord may not be running): %v", err)
+		}
+		return
 	}
 
 	startTime = time.Now()
@@ -29,7 +32,9 @@ func Init() {
 	})
 
 	if err != nil {
-		logger.Log.Println("Discord RPC initialization error:", err)
+		if logger.Log != nil {
+			logger.Log.Println("Discord RPC initialization error:", err)
+		}
 	}
 }
 
@@ -60,6 +65,8 @@ func OpenProject(cfg *config.Config) {
 	})
 
 	if err != nil {
-		logger.Log.Println("Discord RPC update error:", err)
+		if logger.Log != nil {
+			logger.Log.Println("Discord RPC update error:", err)
+		}
 	}
 }

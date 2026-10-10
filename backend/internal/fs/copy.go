@@ -3,12 +3,18 @@ package fs
 import (
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/sqot0/packsmith/backend/internal/logger"
 )
 
 func Copy(src, dst string) error {
 	logger.Log.Printf("Copying file from %s to %s", src, dst)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		logger.Log.Printf("Error creating destination directory: %v", err)
+		return err
+	}
+
 	in, err := os.Open(src)
 	if err != nil {
 		logger.Log.Printf("Error opening source file: %v", err)

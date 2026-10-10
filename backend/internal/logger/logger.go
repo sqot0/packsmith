@@ -6,19 +6,15 @@ import (
 	"path"
 )
 
-var Log *log.Logger
+var Log = log.New(os.Stderr, "[APP] ", log.Ldate|log.Ltime)
 
 func Init() {
-	Log = log.New(os.Stdout, "[APP] ", log.Ldate|log.Ltime)
-	Log.Println("Initializing logger")
-
 	logFile := getLogFilePath()
-	Log.Printf("Log file path: %s", logFile)
-
 	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
+		Log = log.New(os.Stderr, "[APP] ", log.Ldate|log.Ltime)
 		Log.Printf("Error opening log file: %v", err)
-		panic(err)
+		return
 	}
 
 	Log = log.New(file, "[APP] ", log.Ldate|log.Ltime)
@@ -29,7 +25,7 @@ func getLogFilePath() string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		Log.Printf("Error getting current working directory: %v", err)
-		panic(err)
+		return "app.log"
 	}
 	return path.Join(cwd, "app.log")
 }
