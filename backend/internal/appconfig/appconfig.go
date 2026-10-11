@@ -1,6 +1,7 @@
 package appconfig
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -70,8 +71,10 @@ func Load() (*AppSettings, error) {
 		return &AppSettings{MaxWorkers: cachedLimit, RecentProjects: []RecentProject{}}, err
 	}
 
+	trimmed := bytes.TrimRight(data, " \t\r\n\x00")
+
 	var cfg AppSettings
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	if err := json.Unmarshal(trimmed, &cfg); err != nil {
 		defaultCfg := &AppSettings{
 			MaxWorkers:     DefaultMaxWorkers,
 			RecentProjects: make([]RecentProject, 0),
@@ -116,8 +119,22 @@ func saveLocked(configPath string, cfg *AppSettings) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal settings: %w", err)
 	}
+	data = append(data, '\n')
 
-	return os.WriteFile(configPath, data, 0o644)
+	f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_ = f.Truncate(0)
+	n, err := f.Write(data)
+	if err != nil {
+		return err
+	}
+	_ = f.Truncate(int64(n))
+	_ = f.Sync()
+	return nil
 }
 
 func GetMaxWorkers() int {
