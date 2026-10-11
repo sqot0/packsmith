@@ -8,6 +8,8 @@ Packsmith is an open source application for managing Minecraft modpacks that all
 - Search and download mods from Modrinth and CurseForge.
 - Separate mods for client and server.
 - Update, change versions, or delete mods from your modpack.
+- Configure global application settings and adjust concurrent worker threads for file downloads and installs.
+- Quick switch between projects via the Recent Projects history.
 - Automate and interact with your modpacks via the built-in Model Context Protocol (MCP) server.
 
 > [!WARNING]
@@ -22,8 +24,23 @@ Packsmith is an open source application for managing Minecraft modpacks that all
 1. Download the latest release from [Releases](https://github.com/sqot0/packsmith/releases).
 2. Run the executable:
    - packsmith.exe
-3. Create a new project or open an existing one.
+3. Create a new project or open an existing one (or select from **Open > Open Recent**).
 4. Add mods, manage versions, and configure client/server separation.
+5. Customize global preferences in **Settings** (such as worker thread concurrency).
+
+# Application Settings & Recent Projects
+
+Packsmith persists global user configuration in standard system configuration directory:
+- **Windows**: `%APPDATA%\packsmith\config.json`
+- **Linux/macOS**: `~/.config/packsmith/config.json`
+
+### Configuration Options
+- `maxWorkers`: Maximum concurrent worker goroutines for mod downloads and file operations in the installer and updater (default: `15`).
+- `recentProjects`: Automatically maintained history of recently opened or created modpacks.
+
+### In the UI
+- **Open Recent**: Accessible under the **Open** menu in the top menubar to reopen previous projects in a single click.
+- **Settings Dialog**: Open via **Settings** in the top menubar to adjust concurrency or manage/clear project history.
 
 # Building from Source
 
@@ -36,7 +53,7 @@ To build Packsmith from source, follow these steps:
 
 # Model Context Protocol (MCP) Server
 
-Packsmith provides a full Model Context Protocol (MCP) layer using [`github.com/mark3labs/mcp-go`](https://mcp-go.dev), allowing AI assistants (Claude Desktop, Cursor, Antigravity, etc.) to manage modpacks, search mods, inspect updates, and build modpacks.
+Packsmith provides a full Model Context Protocol (MCP) layer using [`github.com/mark3labs/mcp-go`](https://mcp-go.dev), allowing AI assistants (Claude Desktop, Cursor, Antigravity, etc.) to manage modpacks, search mods, inspect updates, configure settings, and build modpacks.
 
 ### Running the MCP Server
 
@@ -105,6 +122,10 @@ Add Packsmith to your MCP client configuration (e.g. `claude_desktop_config.json
 | `check_mods_updates` | Check for updates across installed mods |
 | `update_mods` | Update specified or all eligible mods |
 | `install_mods` | Build/install client and server modpack distribution directories |
+| `get_app_settings` | Get global application settings (`maxWorkers`, recent projects) |
+| `save_app_settings` | Update global application settings |
+| `get_recent_projects` | List recently opened or initialized modpack projects |
+| `clear_recent_projects` | Clear recent modpack projects history |
 | `get_logs` | Retrieve recent application logs |
 
 ### Resources & Prompts

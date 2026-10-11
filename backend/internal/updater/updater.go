@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/sqot0/packsmith/backend/internal/appconfig"
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/fs"
 	"github.com/sqot0/packsmith/backend/internal/logger"
@@ -120,7 +121,7 @@ func UpdateMods(cfg *config.Config, mods []ModToUpdate, projectPath string) erro
 	}
 
 	jobs := make(chan ModToUpdate, len(mods))
-	results := util.WorkerPool(jobs, processUpdate, len(mods))
+	results := util.WorkerPool(jobs, processUpdate, min(len(mods), appconfig.GetMaxWorkers()))
 
 	go func() {
 		for _, mod := range mods {

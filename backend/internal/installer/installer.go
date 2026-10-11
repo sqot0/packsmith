@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sqot0/packsmith/backend/internal/appconfig"
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/fs"
 	"github.com/sqot0/packsmith/backend/internal/logger"
@@ -81,7 +82,7 @@ func InstallMods(projectPath string) error {
 	}
 
 	jobs := make(chan config.Mod, len(cfg.Mods))
-	results := util.WorkerPool(jobs, processMod, len(cfg.Mods))
+	results := util.WorkerPool(jobs, processMod, min(len(cfg.Mods), appconfig.GetMaxWorkers()))
 
 	go func() {
 		for _, mod := range cfg.Mods {

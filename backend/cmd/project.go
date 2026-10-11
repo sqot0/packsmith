@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/sqot0/packsmith/backend/internal/appconfig"
 	"github.com/sqot0/packsmith/backend/internal/config"
 	"github.com/sqot0/packsmith/backend/internal/discord"
 	"github.com/sqot0/packsmith/backend/internal/logger"
@@ -30,6 +31,9 @@ func (a *App) OpenProject(projectPath string) (*config.Config, error) {
 	}
 	a.ProjectPath = projectPath
 	discord.OpenProject(cfg)
+	if _, err := appconfig.AddRecentProject(projectPath, cfg.Name); err != nil {
+		logger.Log.Printf("Warning: failed to add recent project: %v", err)
+	}
 	logger.Log.Println("Project opened successfully")
 	return cfg, nil
 }
@@ -39,6 +43,9 @@ func (a *App) InitializeProject(projectPath, name, mc, loader string) error {
 	if err := config.Init(projectPath, name, mc, loader); err != nil {
 		logger.Log.Printf("Error initializing project: %v", err)
 		return err
+	}
+	if _, err := appconfig.AddRecentProject(projectPath, name); err != nil {
+		logger.Log.Printf("Warning: failed to add recent project: %v", err)
 	}
 	logger.Log.Println("Project initialized successfully")
 	return nil

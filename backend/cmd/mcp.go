@@ -48,6 +48,7 @@ func (a *App) NewMCPServer() *server.MCPServer {
 
 	a.registerProjectTools(s)
 	a.registerModTools(s)
+	a.registerSettingsTools(s)
 	a.registerResources(s)
 	a.registerPrompts(s)
 
@@ -154,6 +155,82 @@ func (a *App) registerProjectTools(s *server.MCPServer) {
 				return mcp.NewToolResultError(fmt.Sprintf("Failed to read logs: %v", err)), nil
 			}
 			return mcp.NewToolResultText(logs), nil
+		},
+	)
+}
+
+func (a *App) registerSettingsTools(s *server.MCPServer) {
+	// Tool: get_app_settings
+	s.AddTool(
+		mcp.NewTool(
+			"get_app_settings",
+			mcp.WithDescription("Get Packsmith global application settings including maxWorkers and recent projects"),
+		),
+		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			cfg, err := a.GetAppSettings()
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to get app settings: %v", err)), nil
+			}
+			data, _ := json.MarshalIndent(cfg, "", "  ")
+			return mcp.NewToolResultText(string(data)), nil
+		},
+	)
+
+	// Tool: save_app_settings
+	s.AddTool(
+		mcp.NewTool(
+			"save_app_settings",
+			mcp.WithDescription("Update Packsmith global application settings"),
+			mcp.WithNumber("max_workers", mcp.Description("Maximum worker goroutines for concurrent file operations (e.g. 15)")),
+		),
+		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			cfg, err := a.GetAppSettings()
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to load current settings: %v", err)), nil
+			}
+			type savePayload struct {
+				MaxWorkers int `json:"max_workers"`
+			}
+			var payload savePayload
+			_ = request.BindArguments(&payload)
+			if payload.MaxWorkers > 0 {
+				cfg.MaxWorkers = payload.MaxWorkers
+			}
+			if err := a.SaveAppSettings(cfg); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to save app settings: %v", err)), nil
+			}
+			data, _ := json.MarshalIndent(cfg, "", "  ")
+			return mcp.NewToolResultText(fmt.Sprintf("Settings saved successfully:\n%s", string(data))), nil
+		},
+	)
+
+	// Tool: get_recent_projects
+	s.AddTool(
+		mcp.NewTool(
+			"get_recent_projects",
+			mcp.WithDescription("Get the list of recently opened or initialized modpack projects"),
+		),
+		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			projects, err := a.GetRecentProjects()
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to get recent projects: %v", err)), nil
+			}
+			data, _ := json.MarshalIndent(projects, "", "  ")
+			return mcp.NewToolResultText(string(data)), nil
+		},
+	)
+
+	// Tool: clear_recent_projects
+	s.AddTool(
+		mcp.NewTool(
+			"clear_recent_projects",
+			mcp.WithDescription("Clear all recent modpack projects history"),
+		),
+		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			if err := a.ClearRecentProjects(); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to clear recent projects: %v", err)), nil
+			}
+			return mcp.NewToolResultText("Recent projects cleared successfully"), nil
 		},
 	)
 }

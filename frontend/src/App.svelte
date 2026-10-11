@@ -9,6 +9,7 @@
     import UpdateModsDialog from "$lib/components/UpdateModsDialog.svelte";
     import ChangeVersionModDialog from "$lib/components/ChangeVersionModDialog.svelte";
     import LogsDialog from "$lib/components/LogsDialog.svelte";
+    import SettingsDialog from "$lib/components/SettingsDialog.svelte";
 
     import { projectState } from "$lib/stores/project.svelte";
     import { Toaster } from "$lib/components/ui/sonner/index.js";
@@ -19,6 +20,7 @@
 <UpdateModsDialog />
 <ChangeVersionModDialog />
 <LogsDialog />
+<SettingsDialog />
 <Toaster expand={true} position="bottom-right" />
 
 <main>

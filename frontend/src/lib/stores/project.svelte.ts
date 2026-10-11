@@ -34,6 +34,22 @@ class ProjectStore {
         }
     };
 
+    openRecentProject = async (projectPath: string) => {
+        if (!projectPath) return;
+        this.current.path = projectPath;
+
+        try {
+            const projectConfig = await projectService.openProject(projectPath);
+            this.current = {
+                path: projectPath,
+                ...projectConfig
+            };
+        } catch (error) {
+            console.error('Failed to open recent project:', error);
+            throw error;
+        }
+    };
+
     createProject = async (name: string, minecraftVersion: string, modLoader: string) => {
         await projectService.initializeProject(this.current.path, name, minecraftVersion, modLoader);
         const projectConfig = await projectService.openProject(this.current.path);
@@ -47,7 +63,7 @@ class ProjectStore {
     refreshProject = async () => {
         if (!this.current.path) return;
         try {
-        const projectConfig = await projectService.openProject(this.current.path);
+            const projectConfig = await projectService.openProject(this.current.path);
             this.current = {
                 path: this.current.path,
                 ...projectConfig
@@ -58,6 +74,4 @@ class ProjectStore {
     }
 }
 
-
 export const projectState = new ProjectStore();
-

@@ -12,6 +12,7 @@ class UIStore {
   importModsDialogOpen = $state(false);
   changeModSideDialogOpen = $state(false);
   addLocalModDialogOpen = $state(false);
+  settingsDialogOpen = $state(false);
   logsContent = $state('');
   modToAdd = $state<ModSearchResult | null>(null);
   selectedModId = $state<string | null>(null);
@@ -86,6 +87,14 @@ class UIStore {
   closeAddLocalModDialog = async () => {
     this.addLocalModDialogOpen = false;
     this.localModFilePath = null;
+  }
+
+  openSettingsDialog = async () => {
+    this.settingsDialogOpen = true;
+  }
+
+  closeSettingsDialog = async () => {
+    this.settingsDialogOpen = false;
   }
 }
 

@@ -5,11 +5,13 @@
   import { projectState } from '$lib/stores/project.svelte';
   import * as modService from '$lib/services/mod-service';
   import type { ModUpdateInfo } from '$lib/types/mod';
-  import {Checkbox} from "$lib/components/ui/checkbox";
-  import {toast} from "svelte-sonner";
+  import { Checkbox } from "$lib/components/ui/checkbox";
+  import { toast } from "svelte-sonner";
+  import { Loader } from '@lucide/svelte';
 
   let updates = $state<ModUpdateInfo[]>([]);
   let loading = $state(false);
+  let isUpdating = $state(false);
   let selectedUpdates = $state<Set<number>>(new Set());
 
   $effect(() => {
@@ -18,6 +20,7 @@
     } else {
       updates = [];
       selectedUpdates = new Set();
+      isUpdating = false;
     }
   });
 
@@ -40,16 +43,22 @@
   }
 
   async function handleUpdate() {
+      if (isUpdating) return;
       const selectedMods = Array.from(selectedUpdates).map(i => updates[i]);
+      if (selectedMods.length === 0) return;
+
+      isUpdating = true;
       try {
           await modService.updateMods(selectedMods);
-          await projectState.refreshProject()
+          await projectState.refreshProject();
           toast.success('Mods updated successfully');
+          await uiState.closeUpdateModsDialog();
       } catch (error) {
           console.error('Failed to update mods:', error);
           toast.error('Failed to update mods', { description: String(error) });
+      } finally {
+          isUpdating = false;
       }
-      await uiState.closeUpdateModsDialog();
   }
 
   function getModName(modId: string): string {
@@ -72,10 +81,18 @@
     </Dialog.Header>
 
     <div class="grid gap-4">
-      {#if loading}
-        <p>Checking for updates...</p>
+      {#if isUpdating}
+        <div class="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+          <Loader class="w-6 h-6 animate-spin text-primary" />
+          <p class="text-sm font-medium">Updating {selectedUpdates.size} mod{selectedUpdates.size > 1 ? 's' : ''}...</p>
+        </div>
+      {:else if loading}
+        <div class="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+          <Loader class="w-5 h-5 animate-spin" />
+          <span>Checking for updates...</span>
+        </div>
       {:else if updates.length === 0}
-        <p class="text-muted-foreground">Everything is up to date</p>
+        <p class="text-muted-foreground py-4 text-center">Everything is up to date</p>
       {:else}
         <ul class="space-y-2">
           {#each updates as update, i}
@@ -106,11 +123,16 @@
 
     <Dialog.Footer>
         <Button
-          disabled={selectedUpdates.size === 0}
+          disabled={selectedUpdates.size === 0 || isUpdating || loading}
           onclick={handleUpdate}
-          class="cursor-pointer"
+          class="cursor-pointer gap-2"
         >
-          Update Selected ({selectedUpdates.size})
+          {#if isUpdating}
+            <Loader class="w-4 h-4 animate-spin" />
+            Updating...
+          {:else}
+            Update Selected ({selectedUpdates.size})
+          {/if}
         </Button>
     </Dialog.Footer>
   </Dialog.Content>
